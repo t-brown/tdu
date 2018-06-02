@@ -30,60 +30,39 @@
  */
 
 /**
- * \file defs.h
- * Internal definitions.
+ * \file walk.h
+ * Internal definitions for walking a directory tree.
  *
- * \ingroup defs
+ * \ingroup walk
  * \{
  **/
 
-#ifndef TDU_DEFS_H
-#define TDU_DEFS_H
+#ifndef TDU_WALK_H
+#define TDU_WALK_H
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-/* String localization */
-#define _(x)              gettext(x)
-
-
 /**
- * Compiler __attribute__ extensions
+ * Structure store the toplevel path and sizes.
  **/
-#ifdef HAVE___ATTRIBUTE__
-  #define ATT_CONSTR       __attribute__((__constructor__))
-  #define ATT_DESTR        __attribute__((__destructor__))
-  #define ATT_PUBLIC       __attribute__((__visibility__("default")))
-  #define ATT_LOCAL        __attribute__((__visibility__("hidden")))
-  #define ATT_DEPRECATED   __attribute__((__deprecated__))
-  #define ATT_MSIZE(x)     __attribute__((__alloc_size__(x)))
-  #define ATT_MALLOC       __attribute__((__malloc__))
-  #define ATT_FMT(x,y)     __attribute__((__format__(printf, x, y)))
-  #define ATT_NORETURN     __attribute__((__noreturn__))
-  #define ATT_INLINE       __attribute__((__always_inline__))
-  #define ATT_ALIAS(x)     __attribute__((__weak__, __alias__(x)))
-#else
-  #define ATT_CONSTR
-  #define ATT_DESTR
-  #define ATT_PUBLIC
-  #define ATT_LOCAL
-  #define ATT_DEPRECATED(msg)
-  #define ATT_MSIZE(x)
-  #define ATT_MALLOC
-  #define ATT_FMT(x,y)
-  #define ATT_NORETURN
-  #define ATT_INLINE
-  #define ATT_ALIAS(x)
-#endif
+struct pinfo {
+	int level;             /**< The path level **/
+	uint64_t greater;      /**< Bytes that are older than atime **/
+	uint64_t total;        /**< Total number of bytes in the path **/
+	char *path;            /**< Path string **/
+};
 
+/* Walk a directory tree */
+int32_t walk(const char *);
 
 #ifdef __cplusplus
 }                               /* extern "C" */
 #endif
 
-#endif                          /* TDU_DEFS_H */
+#endif                          /* TDU_WALK_H */
 /**
  * \}
  **/

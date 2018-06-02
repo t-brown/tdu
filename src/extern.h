@@ -38,8 +38,8 @@
  * \{
  **/
 
-#ifndef DUT_EXTERN_H
-#define DUT_EXTERN_H
+#ifndef TDU_EXTERN_H
+#define TDU_EXTERN_H
 
 #ifdef __cplusplus
 extern "C"
@@ -61,7 +61,7 @@ extern struct opts options;     /**< Program command line options **/
 }                               /* extern "C" */
 #endif
 
-#endif                          /* DUT_EXTERN_H */
+#endif                          /* TDU_EXTERN_H */
 /**
  * \}
  **/

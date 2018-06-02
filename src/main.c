@@ -57,6 +57,7 @@
 #include "gettext.h"
 #include "defs.h"
 #include "extern.h"
+#include "walk.h"
 
 #define DEFAULT_ATIME    45
 #define SECONDS_IN_DAY   60 * 60 * 24
@@ -105,6 +106,11 @@ main(int32_t argc, char **argv)
 	/* parse command line arguments */
 	if (parse_argv(argc, argv, &dir)) {
 		exit(EXIT_FAILURE);
+	}
+
+	/* Walk the directory tree */
+	if (walk(dir)) {
+		return(EXIT_FAILURE);
 	}
 
 	return(EXIT_SUCCESS);

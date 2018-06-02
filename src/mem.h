@@ -37,8 +37,8 @@
  * \{
  **/
 
-#ifndef DUT_MEM_H
-#define DUT_MEM_H
+#ifndef TDU_MEM_H
+#define TDU_MEM_H
 
 #ifdef __cplusplus
 extern "C"
@@ -52,7 +52,7 @@ void * xmalloc(size_t);
 }                               /* extern "C" */
 #endif
 
-#endif                          /* DUT_MEM_H */
+#endif                          /* TDU_MEM_H */
 /**
  * \}
  **/
