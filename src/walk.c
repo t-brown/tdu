@@ -62,6 +62,14 @@
 #include "mem.h"
 #include "walk.h"
 
+/* TODO:
+ * - actual pretty tree printing
+ * - human readable units k,M,G,T,P
+ * - abs path so as to remove ./ if . is specified (also relates to #1)
+ */
+#define  LEVEL_1   "├──"
+#define  LEVEL_2   "│  "LEVEL_1
+
 /* Internal functions */
 static uint64_t   max_openfds(void);
 static int        dir_size(const char *, const struct stat *, int, struct FTW *);
@@ -178,7 +186,7 @@ dir_size(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf
 
 	ptr = tsearch(cur, &root, cmp);
 	(*ptr)->total += sb->st_size;
-	(*ptr)->level = ftwbuf->level
+	(*ptr)->level = ftwbuf->level;
 
 	if (difftime(sb->st_atime, options.atime) < 0.0) {
 		(*ptr)->greater += sb->st_size;

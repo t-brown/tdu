@@ -34,9 +34,9 @@ AC_PROG_CC_STDC
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([assert.h err.h ftw.h getopt.h limits.h
-                  locale.h poll.h search.h stdint.h stdio.h
-                  stdlib.h string.h sys/resource.h sys/time.h
+AC_CHECK_HEADERS([assert.h err.h ftw.h getopt.h limits.h       \
+                  locale.h poll.h search.h stdint.h stdio.h    \
+                  stdlib.h string.h sys/resource.h sys/time.h  \
                   sys/types.h sysexits.h time.h])
 
 dnl override CFLAGS selection when debugging
