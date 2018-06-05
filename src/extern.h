@@ -52,6 +52,7 @@ struct opts {
  int atime_days;
  uint32_t maxdepth;
  time_t atime;
+ char *path;
 };
 
 /** Extern declarations **/

@@ -66,7 +66,7 @@
 static void print_usage(void);
 static void print_version(void);
 static const char * program_name(void);
-static int32_t parse_argv(int32_t , char **, char **);
+static int32_t parse_argv(int32_t , char **);
 
 struct opts options = {0}; /**< Program options */
 
@@ -84,7 +84,6 @@ main(int32_t argc, char **argv)
 {
 
 	uint32_t verbose = 0;   /**< Program verbosity **/
-	char *dir = NULL;       /**< Directory to report **/
 
 	/* initialise gettext */
 #ifdef HAVE_SETLOCALE
@@ -104,12 +103,12 @@ main(int32_t argc, char **argv)
 	options.atime_days = DEFAULT_ATIME;
 
 	/* parse command line arguments */
-	if (parse_argv(argc, argv, &dir)) {
+	if (parse_argv(argc, argv)) {
 		exit(EXIT_FAILURE);
 	}
 
 	/* Walk the directory tree */
-	if (walk(dir)) {
+	if (walk()) {
 		return(EXIT_FAILURE);
 	}
 
@@ -121,17 +120,14 @@ main(int32_t argc, char **argv)
  *
  * \param[in]  argc     Number of command line arguments.
  * \param[in]  argv     Reference to the pointer to the argument array list.
- * \param[out] dir      Directory to traverse and report.
- * \param[out] atime    Last access time.
- * \param[out] maxdepth The maximum depth to report on.
  *
  * \retval 0 If there were no errors.
  **/
 static int32_t
-parse_argv(int32_t argc, char **argv, char **dir)
+parse_argv(int32_t argc, char **argv)
 {
-	int32_t err = 0;
-	int32_t opt =0;
+	int32_t i = 0;
+	int32_t opt = 0;
 	int32_t opt_index = 0;
 	uint32_t atime = 45;                    /* default 45 days ago */
 	char *soptions = "hVva:m:";		/* short options structure */
@@ -175,11 +171,17 @@ parse_argv(int32_t argc, char **argv, char **dir)
 		warnx(_("error: must specify a destination"));
 		print_usage();
 	} else {
-		*dir = argv[0];
+		options.path = argv[0];
 	}
-	assert(*dir != NULL);
+	assert(options.path != NULL);
 	assert(atime > 0);
 	assert(options.maxdepth > 0);
+
+	/* Remove a trailing / from the path */
+	i = strlen(options.path);
+	if (options.path[i-1] == '/') {
+		options.path[i-1] = '\0';
+	}
 
 	/* Convert a number of days ago into a time_t */
 	if ((now = time(NULL)) == (time_t)-1) {

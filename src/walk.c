@@ -53,8 +53,11 @@
 #include <sys/resource.h>
 #include <poll.h>
 #include <time.h>
+#include <sysexits.h>
 #include <string.h>
 #include <search.h>
+#include <unistd.h>
+#include <libgen.h>
 
 #include "gettext.h"
 #include "defs.h"
@@ -62,9 +65,9 @@
 #include "mem.h"
 #include "walk.h"
 
+
 /* TODO:
  * - actual pretty tree printing
- * - human readable units k,M,G,T,P
  * - abs path so as to remove ./ if . is specified (also relates to #1)
  */
 #define  LEVEL_1   "├──"
@@ -73,10 +76,12 @@
 /* Internal functions */
 static uint64_t   max_openfds(void);
 static int        dir_size(const char *, const struct stat *, int, struct FTW *);
-static char      *pname(const char *);
+static char      *pabs(const char *);
+static char      *pname(const char *, int);
 static int        cmp(const void *, const void *);
 static void       action(const void *, VISIT, int);
 static int        summary(void);
+static char      *tformat(uint64_t);
 
 /* Tree root node */
 void *root = NULL;
@@ -91,25 +96,22 @@ struct sfmt fmt = {0};
 /**
  * Walk a file system
  *
- * \param[in] dirpath   Directory path for the starting point.
- * \param[in] atime     The minimum last accessed time.
- * \param[in] maxdepth  The maximum depth to summarize for.
- *
  * \retval 0 If there were no errors.
  * \retval 1 If an error was encounted.
  **/
 int32_t
-walk(const char *dirpath)
+walk()
 {
 
 	uint64_t nopenfd = 0;           /**< Max open files **/
+	char *adir = NULL;              /**< Absolute path **/
 
 	if ((nopenfd = max_openfds()) <= 0) {
 		return(EXIT_FAILURE);
 	}
 
-	if (nftw(dirpath, dir_size, nopenfd, FTW_PHYS|FTW_MOUNT) != 0) {
-		warnx(_("walking %s failed."), dirpath);
+	if (nftw(options.path, dir_size, nopenfd, FTW_PHYS|FTW_MOUNT) != 0) {
+		warnx(_("walking %s failed."), options.path);
 		return(EXIT_FAILURE);
 	}
 
@@ -182,7 +184,8 @@ dir_size(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf
 	struct pinfo **ptr = NULL;
 
 	cur = xmalloc(sizeof(struct pinfo));
-	cur->path = pname(fpath);
+
+	cur->path = pname(fpath, tflag);
 
 	ptr = tsearch(cur, &root, cmp);
 	(*ptr)->total += sb->st_size;
@@ -196,33 +199,92 @@ dir_size(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf
 }
 
 /**
+ * Absolute path
+ *
+ * Figure out the absolute path name when given a relative path.
+ *
+ * \param[in] rel The relative path name.
+ *
+ * \retval abs The absolute path name.
+ **/
+static char *
+pabs(const char *rel)
+{
+
+	size_t bsize = 0;
+	char *buf = NULL;
+	struct stat sbuf = {0};
+
+	/* make sure we were given a relative path */
+	if (rel == NULL) {
+		return(NULL);
+	}
+
+	/* make sure relative path actually exists */
+	if (stat(rel, &sbuf) < 0) {
+		errx(EX_IOERR, _("unable to stat %s"), rel);
+	}
+
+	bsize = pathconf(".", _PC_PATH_MAX);
+	buf = (char *)xmalloc((bsize + 1) * sizeof(char));
+
+	/* find the absolute path */
+	if (realpath(rel, buf) == NULL) {
+		errx(EX_IOERR, _("unable to resolve %s an error occurred at %s"),
+		     rel, buf);
+	}
+
+	return(buf);
+}
+
+/**
  * Path name.
  *
  * Truncate a full path name down to the options
  * maxdepth path length.
  *
  * \param[in] path   The full path name
+ * \param[in] tflag  The path type flag
  * \retval    str    The truncated path
  **/
 static char *
-pname(const char *path)
+pname(const char *path, int tflag)
 {
 	int i = 0;
 	int j = 0;
 	int n = 0;
+	static int m = 0;
+	char *dir = NULL;
 	char *str = NULL;
 
-	n = strlen(path);
-	for (i = 0; i < n; ++i) {
-		if (path[i] == '/') {
+	/* walk the path counting /'s */
+	if (m == 0) {
+		m = strlen(options.path);
+	}
+
+	if (tflag == FTW_F || tflag == FTW_SL) {
+		dir = dirname(path);
+	} else {
+		dir = strdup(path);
+	}
+
+	n = strlen(dir);
+	if (dir[n-1] == '/') {
+		dir[n-1] = '\0';
+	}
+
+	for (i = m; i < n; ++i) {
+		if (dir[i] == '/') {
 			++j;
 		}
 		if (j == options.maxdepth) {
 			break;
 		}
 	}
+
+
 	str = xmalloc((i+1)*sizeof(char));
-	strncpy(str, path, i);
+	strncpy(str, dir, i);
 	if (i > fmt.lpath) {
 		fmt.lpath = i;
 	}
@@ -258,14 +320,33 @@ cmp(const void *a, const void *b)
 static int32_t
 summary(void)
 {
+	int i = 0;
+	char dir[256] = {0};
 	char tmp[256] = {0};
+	struct pinfo *cur = NULL;
+	struct pinfo **ptr = NULL;
 
-	sprintf(tmp, ">%d days [%%]", options.atime_days);
+	sprintf(tmp, ngettext(">%d day [%%]", ">%d days [%%]", options.atime_days),
+		options.atime_days);
 	fmt.lpect = strlen(tmp);
 
-	printf("%-*s  %-*s   Size [Mb]\n",
-	       fmt.lpath, "Directory",
+	sprintf(dir, _("Directory"));
+	i = strlen(dir);
+	if (fmt.lpath < i) {
+		fmt.lpath = i;
+	}
+
+	printf(_("%-*s  %-*s   Size\n"),
+	       fmt.lpath, dir,
 	       fmt.lpect, tmp);
+
+	cur = xmalloc(sizeof(struct pinfo));
+	cur->path = options.path;
+
+	ptr = tfind(cur, &root, cmp);
+	action((void *)ptr, postorder, 0);
+	tdelete(cur, &root, cmp);
+
 	twalk(root, action);
 
 	return(EXIT_SUCCESS);
@@ -286,15 +367,70 @@ action(const void *node, VISIT v, int level)
 {
 	struct pinfo *n = *(struct pinfo * const *)node;
 	float percentage = 0.0;
-	float total = 0.0;
+	char *total = NULL;
 
-	total = (float)(n->total / (1024 * 1024));
+	total = tformat(n->total);
 	percentage = (float)(n->greater / (float)n->total) * 100.0;
 
 	if (v == postorder || v == leaf) {
-		printf(_("%-*s %*.0f    %.2f\n"),
+		printf(_("%-*s %*.0f      %s\n"),
 		       fmt.lpath, n->path,
 		       fmt.lpect, percentage,
 		       total);
 	}
+
+	if (total) {
+		free(total);
+		total = NULL;
+	}
+}
+
+/**
+ * Format the total as a human readable float.
+ *
+ * \param[in] total  The integer total size.
+ *
+ * \retval ftotal    The human readable total.
+ **/
+static char *
+tformat(uint64_t total)
+{
+	int n = 0;
+	uint64_t kb = 1024;
+	uint64_t mb = 1024 * kb;
+	uint64_t gb = 1024 * mb;
+	uint64_t tb = 1024 * gb;
+	uint64_t pb = 1024 * tb;
+	uint64_t eb = 1024 * pb;
+
+	float ftotal = 0.0;
+	char *str = NULL;
+
+	n = 12;
+	str = xmalloc(n * sizeof(char));
+
+	if (total < kb) {
+		ftotal = (float)(total);
+		snprintf(str, n, "%6.2f [b]", ftotal);
+	} else if (total > kb && total < mb) {
+		ftotal = (float)(total / kb);
+		snprintf(str, n, "%6.2f [kb]", ftotal);
+	} else if (total > mb && total < gb) {
+		ftotal = (float)(total / mb);
+		snprintf(str, n, "%6.2f [Mb]", ftotal);
+	} else if (total > gb && total < tb) {
+		ftotal = (float)(total / gb);
+		snprintf(str, n, "%6.2f [Gb]", ftotal);
+	} else if (total > tb && total < pb) {
+		ftotal = (float)(total / tb);
+		snprintf(str, n, "%6.2f [Tb]", ftotal);
+	} else if (total > pb && total < eb) {
+		ftotal = (float)(total / pb);
+		snprintf(str, n, "%6.2f [Pb]", ftotal);
+	} else {
+		ftotal = (float)(total / eb);
+		snprintf(str, n, "%6.2f [Eb]", ftotal);
+	}
+
+	return(str);
 }

@@ -56,7 +56,7 @@ struct pinfo {
 };
 
 /* Walk a directory tree */
-int32_t walk(const char *);
+int32_t walk();
 
 #ifdef __cplusplus
 }                               /* extern "C" */
