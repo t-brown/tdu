@@ -58,6 +58,7 @@
 #include <search.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <sysexits.h>
 
 #include "gettext.h"
 #include "defs.h"
@@ -74,7 +75,7 @@ static uint64_t   max_openfds(void);
 static char      *pabs(const char *);
 static char      *pname(const char *, int);
 static int        dir_size(const char *, const struct stat *, int, struct FTW *);
-static int        ppath(const char *, uint32_t, char **, int *);
+static char      *ppath(const char *, uint32_t);
 static int        summary(void);
 static char      *tformat(uint64_t);
 
@@ -245,6 +246,7 @@ pname(const char *path, int tflag)
 	int j = 0;
 	int n = 0;
 	static int m = 0;
+	char *tmp = NULL;
 	char *dir = NULL;
 	char *str = NULL;
 
@@ -252,10 +254,11 @@ pname(const char *path, int tflag)
 		m = strlen(options.path);
 	}
 
+	tmp = strdup(path);
 	if (tflag == FTW_F || tflag == FTW_SL) {
-		dir = dirname(path);
+		dir = dirname(tmp);
 	} else {
-		dir = strdup(path);
+		dir = tmp;
 	}
 
 	n = strlen(dir);
@@ -275,6 +278,11 @@ pname(const char *path, int tflag)
 
 	str = xmalloc((i+1)*sizeof(char));
 	strncpy(str, dir, i);
+
+	if (tmp != NULL) {
+		free(tmp);
+		tmp = NULL;
+	}
 
 	return(str);
 }
@@ -310,8 +318,8 @@ summary(void)
 	struct pinfo *cur = NULL;
 	struct pinfo **ptr = NULL;
 
-	printf(ngettext("Size [%s]  >%d day[%%]   Directory\n",
-			"Size [%s]  >%d days[%%]  Directory\n",
+	printf(ngettext("Size [%s]      >%d day[%%]     Directory\n",
+			"Size [%s]      >%d days[%%]    Directory\n",
 			options.atime_days),
 	       options.units, options.atime_days);
 
@@ -342,8 +350,8 @@ action(const void *node, VISIT v, int level)
 {
 	struct pinfo *n = *(struct pinfo * const *)node;
 	int i = 0;
+	float size = 0.0;
 	float percentage = 0.0;
-	float total = 0.0;
 	static size_t scale = 0;
 	char *path = NULL;
 
@@ -370,19 +378,17 @@ action(const void *node, VISIT v, int level)
 		}
 	}
 
-	total = (float)(n->total / scale);
-	percentage = (float)(n->greater / (float)n->total) * 100.0;
-
-	ppath(n->path, n->level, &path, &i);
-
 	if (v == postorder || v == leaf) {
-		printf(_("%6.2f\t%12.0f\t%s\n"),
-		       total, percentage, path);
+
+		size = (float)n->greater / (float)scale;
+		percentage = (float)(n->greater / (float)n->total) * 100.0;
+		path = ppath(n->path, n->level);
+
+		printf(_("%12.2f  %12.0f    %s\n"),
+		       size, percentage, path);
+
 	}
 
-	if (path) {
-		free(path);
-	}
 }
 
 /**
@@ -396,33 +402,43 @@ action(const void *node, VISIT v, int level)
  * \retval 0 If there were no errors.
  * \retval 1 If an error was encounted.
  **/
-static int
-ppath(const char *path, uint32_t level, char **ppath, int *pad)
+static char *
+ppath(const char *path, uint32_t level)
 {
 	uint32_t n = 0;
+	size_t bsize = 0;
 	const char indent[] = u8"│  ";
 	const char tofile[] = u8"├──";
 	const char last[]   = u8"└──";
+	char *ptr = NULL;
+	static char *tmp = NULL;
 
-	*pad = 0;
+
+	bsize = pathconf(".", _PC_PATH_MAX);
+	if (tmp == NULL) {
+		tmp = xmalloc(bsize);
+	} else {
+		memset(tmp, 0, bsize);
+	}
 
 	if (level == 0) {
-		*ppath = strdup(path);
-		return(EXIT_SUCCESS);
+		strcpy(tmp, path);
+		return(tmp);
 	}
-
-	n = strlen(path) + 1;
-	n += level * 3;
-	*ppath = xmalloc(n * sizeof(char));
 
 	for (n = 1; n < level; ++n) {
-		strcat(*ppath, indent);
-		(*pad) += 2;
+		strcat(tmp, indent);
 	}
 
-	strcat(*ppath, tofile);
-	strcat(*ppath, basename(path));
-	(*pad) += 6;
+	strcat(tmp, tofile);
 
-	return(EXIT_SUCCESS);
+	ptr = strdup(path);
+	strcat(tmp, basename(ptr));
+
+	if (ptr != NULL) {
+		free(ptr);
+		ptr = NULL;
+	}
+
+	return(tmp);
 }
