@@ -78,6 +78,15 @@ extern "C"
   #define ATT_ALIAS(x)
 #endif
 
+/**
+ * Byte units
+ **/
+#define kB      0x400UL
+#define MB      0x100000UL
+#define GB      0x40000000UL
+#define TB      0x10000000000UL
+#define PB      0x4000000000000UL
+#define EB      0x1000000000000000UL
 
 #ifdef __cplusplus
 }                               /* extern "C" */

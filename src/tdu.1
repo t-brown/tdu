@@ -38,9 +38,13 @@
 .Nd tree disk usage
 .Sh SYNOPSIS
 .Nm
+.Op Fl V
 .Op Fl a Ar n
+.Op Fl h
 .Op Fl m Ar n
-.Ar
+.Op Fl u Ar units
+.Op Fl v
+.Ar path
 .Sh DESCRIPTION
 The
 .Nm
@@ -48,6 +52,8 @@ utility reports a tree like disk usage.
 .Pp
 The following options are available:
 .Bl -tag -width flag
+.It Fl V
+Display the version number and exit.
 .It Fl a Ar n
 The file last access time in days, to consider as old unused files.
 The default is
@@ -58,11 +64,23 @@ Display a short help message and exit.
 .It Fl m Ar n
 Descend at most
 .Ar n
-directory levels below the command line arguments.
+directory levels below the given path.
 The default is
 .Ar 2 .
-.It Fl V
-Display the version number and exit.
+.It Fl u Ar units
+Display the disk usage in
+.Ar units.
+Possible
+.Ar units
+are
+.Ar kB ,
+.Ar MB ,
+.Ar GB ,
+.Ar TB ,
+.Ar PB ,
+.Ar EB .
+The default is
+.Ar kB .
 .It Fl v
 Verbose mode. Causes
 .Nm

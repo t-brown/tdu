@@ -66,20 +66,15 @@
 #include "walk.h"
 
 
-/* TODO:
- * - actual pretty tree printing
- * - abs path so as to remove ./ if . is specified (also relates to #1)
- */
-#define  LEVEL_1   "├──"
-#define  LEVEL_2   "│  "LEVEL_1
-
 /* Internal functions */
-static uint64_t   max_openfds(void);
+static void       action(const void *, VISIT, int);
+static int        cmp(const void *, const void *);
 static int        dir_size(const char *, const struct stat *, int, struct FTW *);
+static uint64_t   max_openfds(void);
 static char      *pabs(const char *);
 static char      *pname(const char *, int);
-static int        cmp(const void *, const void *);
-static void       action(const void *, VISIT, int);
+static int        dir_size(const char *, const struct stat *, int, struct FTW *);
+static int        ppath(const char *, uint32_t, char **, int *);
 static int        summary(void);
 static char      *tformat(uint64_t);
 
@@ -186,10 +181,13 @@ dir_size(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf
 	cur = xmalloc(sizeof(struct pinfo));
 
 	cur->path = pname(fpath, tflag);
+	cur->level = -1;
 
 	ptr = tsearch(cur, &root, cmp);
 	(*ptr)->total += sb->st_size;
-	(*ptr)->level = ftwbuf->level;
+	if ((*ptr)->level == -1) {
+		(*ptr)->level = ftwbuf->level;
+	}
 
 	if (difftime(sb->st_atime, options.atime) < 0.0) {
 		(*ptr)->greater += sb->st_size;
@@ -257,7 +255,6 @@ pname(const char *path, int tflag)
 	char *dir = NULL;
 	char *str = NULL;
 
-	/* walk the path counting /'s */
 	if (m == 0) {
 		m = strlen(options.path);
 	}
@@ -277,7 +274,7 @@ pname(const char *path, int tflag)
 		if (dir[i] == '/') {
 			++j;
 		}
-		if (j == options.maxdepth) {
+		if (j > options.maxdepth) {
 			break;
 		}
 	}
@@ -336,9 +333,16 @@ summary(void)
 		fmt.lpath = i;
 	}
 
-	printf(_("%-*s  %-*s   Size\n"),
+	printf(ngettext("Size [%s]  >%d day[%%]   Directory\n",
+			"Size [%s]  >%d days[%%]  Directory\n",
+			options.atime_days),
+	       options.units, options.atime_days);
+	/*
+	printf(_("%-*s  %-*s   Size [%s]\n"),
 	       fmt.lpath, dir,
-	       fmt.lpect, tmp);
+	       fmt.lpect, tmp,
+	       options.units);
+	*/
 
 	cur = xmalloc(sizeof(struct pinfo));
 	cur->path = options.path;
@@ -366,71 +370,94 @@ static void
 action(const void *node, VISIT v, int level)
 {
 	struct pinfo *n = *(struct pinfo * const *)node;
+	int i = 0;
 	float percentage = 0.0;
-	char *total = NULL;
+	float total = 0.0;
+	static size_t scale = 0;
+	char *path = NULL;
 
-	total = tformat(n->total);
-	percentage = (float)(n->greater / (float)n->total) * 100.0;
-
-	if (v == postorder || v == leaf) {
-		printf(_("%-*s %*.0f      %s\n"),
-		       fmt.lpath, n->path,
-		       fmt.lpect, percentage,
-		       total);
+	if (scale == 0) {
+		switch (options.units[0]) {
+			case 'k':
+				scale = kB;
+				break;
+			case 'M':
+				scale = MB;
+				break;
+			case 'G':
+				scale = GB;
+				break;
+			case 'T':
+				scale = TB;
+				break;
+			case 'P':
+				scale = PB;
+				break;
+			case 'E':
+				scale = EB;
+				break;
+		}
 	}
 
-	if (total) {
-		free(total);
-		total = NULL;
+	total = (float)(n->total / scale);
+	percentage = (float)(n->greater / (float)n->total) * 100.0;
+
+	ppath(n->path, n->level, &path, &i);
+
+	if (v == postorder || v == leaf) {
+		printf(_("%6.2f\t%12.0f\t%s\n"),
+		       total, percentage, path);
+		/*
+		printf(_("%-*s %*.0f      %6.2f\n"),
+		       fmt.lpath + i, path,
+		       fmt.lpect, percentage,
+		       total);
+		*/
+	}
+
+	if (path) {
+		free(path);
 	}
 }
 
 /**
- * Format the total as a human readable float.
+ * Pretty print a path.
  *
- * \param[in] total  The integer total size.
+ * \param[in] path     The path to print.
+ * \param[in] level    The path level under the top-level.
+ * \param[out] ppath   The pretty printed path.
+ * \param[out] pad     The amount of extra padding added.
  *
- * \retval ftotal    The human readable total.
+ * \retval 0 If there were no errors.
+ * \retval 1 If an error was encounted.
  **/
-static char *
-tformat(uint64_t total)
+static int
+ppath(const char *path, uint32_t level, char **ppath, int *pad)
 {
-	int n = 0;
-	uint64_t kb = 1024;
-	uint64_t mb = 1024 * kb;
-	uint64_t gb = 1024 * mb;
-	uint64_t tb = 1024 * gb;
-	uint64_t pb = 1024 * tb;
-	uint64_t eb = 1024 * pb;
+	uint32_t n = 0;
+	const char indent[] = u8"│  ";
+	const char tofile[] = u8"├──";
+	const char last[]   = u8"└──";
 
-	float ftotal = 0.0;
-	char *str = NULL;
+	*pad = 0;
 
-	n = 12;
-	str = xmalloc(n * sizeof(char));
-
-	if (total < kb) {
-		ftotal = (float)(total);
-		snprintf(str, n, "%6.2f [b]", ftotal);
-	} else if (total > kb && total < mb) {
-		ftotal = (float)(total / kb);
-		snprintf(str, n, "%6.2f [kb]", ftotal);
-	} else if (total > mb && total < gb) {
-		ftotal = (float)(total / mb);
-		snprintf(str, n, "%6.2f [Mb]", ftotal);
-	} else if (total > gb && total < tb) {
-		ftotal = (float)(total / gb);
-		snprintf(str, n, "%6.2f [Gb]", ftotal);
-	} else if (total > tb && total < pb) {
-		ftotal = (float)(total / tb);
-		snprintf(str, n, "%6.2f [Tb]", ftotal);
-	} else if (total > pb && total < eb) {
-		ftotal = (float)(total / pb);
-		snprintf(str, n, "%6.2f [Pb]", ftotal);
-	} else {
-		ftotal = (float)(total / eb);
-		snprintf(str, n, "%6.2f [Eb]", ftotal);
+	if (level == 0) {
+		*ppath = strdup(path);
+		return(EXIT_SUCCESS);
 	}
 
-	return(str);
+	n = strlen(path) + 1;
+	n += level * 3;
+	*ppath = xmalloc(n * sizeof(char));
+
+	for (n = 1; n < level; ++n) {
+		strcat(*ppath, indent);
+		(*pad) += 2;
+	}
+
+	strcat(*ppath, tofile);
+	strcat(*ppath, basename(path));
+	(*pad) += 6;
+
+	return(EXIT_SUCCESS);
 }

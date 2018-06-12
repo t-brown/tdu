@@ -48,11 +48,12 @@ extern "C"
 
 /** Program command line options **/
 struct opts {
- int verbose;
- int atime_days;
- uint32_t maxdepth;
- time_t atime;
- char *path;
+	int verbose;
+	int atime_days;
+	uint32_t maxdepth;
+	time_t atime;
+	char units[3];
+	char *path;
 };
 
 /** Extern declarations **/
