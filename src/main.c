@@ -101,7 +101,7 @@ main(int32_t argc, char **argv)
 	}
 	options.atime -= DEFAULT_ATIME * SECONDS_IN_DAY;
 	options.atime_days = DEFAULT_ATIME;
-	strcpy(options.units, "kB");
+	strcpy(options.units, "GB");
 
 	/* parse command line arguments */
 	if (parse_argv(argc, argv)) {
