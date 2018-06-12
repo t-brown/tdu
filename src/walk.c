@@ -81,13 +81,6 @@ static char      *tformat(uint64_t);
 /* Tree root node */
 void *root = NULL;
 
-/* Summary formatting fields */
-struct sfmt {
-	uint32_t lpath;         /**< Longest path **/
-	uint32_t lpect;         /**< Length of the percentage header **/
-};
-struct sfmt fmt = {0};
-
 /**
  * Walk a file system
  *
@@ -282,9 +275,6 @@ pname(const char *path, int tflag)
 
 	str = xmalloc((i+1)*sizeof(char));
 	strncpy(str, dir, i);
-	if (i > fmt.lpath) {
-		fmt.lpath = i;
-	}
 
 	return(str);
 }
@@ -317,32 +307,13 @@ cmp(const void *a, const void *b)
 static int32_t
 summary(void)
 {
-	int i = 0;
-	char dir[256] = {0};
-	char tmp[256] = {0};
 	struct pinfo *cur = NULL;
 	struct pinfo **ptr = NULL;
-
-	sprintf(tmp, ngettext(">%d day [%%]", ">%d days [%%]", options.atime_days),
-		options.atime_days);
-	fmt.lpect = strlen(tmp);
-
-	sprintf(dir, _("Directory"));
-	i = strlen(dir);
-	if (fmt.lpath < i) {
-		fmt.lpath = i;
-	}
 
 	printf(ngettext("Size [%s]  >%d day[%%]   Directory\n",
 			"Size [%s]  >%d days[%%]  Directory\n",
 			options.atime_days),
 	       options.units, options.atime_days);
-	/*
-	printf(_("%-*s  %-*s   Size [%s]\n"),
-	       fmt.lpath, dir,
-	       fmt.lpect, tmp,
-	       options.units);
-	*/
 
 	cur = xmalloc(sizeof(struct pinfo));
 	cur->path = options.path;
@@ -407,12 +378,6 @@ action(const void *node, VISIT v, int level)
 	if (v == postorder || v == leaf) {
 		printf(_("%6.2f\t%12.0f\t%s\n"),
 		       total, percentage, path);
-		/*
-		printf(_("%-*s %*.0f      %6.2f\n"),
-		       fmt.lpath + i, path,
-		       fmt.lpect, percentage,
-		       total);
-		*/
 	}
 
 	if (path) {
