@@ -10,7 +10,7 @@
 GETTEXT_MACRO_VERSION = 0.19
 
 PACKAGE = tdu
-VERSION = 0.1
+VERSION = 0.2
 PACKAGE_BUGREPORT = tbrown@freeshell.org
 
 SED = /usr/bin/sed
@@ -34,12 +34,12 @@ INSTALL_DATA = ${INSTALL} -m 644
 # We use $(mkdir_p).
 # In automake <= 1.9.x, $(mkdir_p) is defined either as "mkdir -p --" or as
 # "$(mkinstalldirs)" or as "$(install_sh) -d". For these automake versions,
-# ${SHELL} /usr/home/tbrown/git/tdu/build-aux/install-sh does not start with $(SHELL), so we add it.
+# ${SHELL} /home/tbrown/git/tdu/build-aux/install-sh does not start with $(SHELL), so we add it.
 # In automake >= 1.10, $(MKDIR_P) is derived from ${MKDIR_P}, which is defined
 # either as "/path/to/mkdir -p" or ".../install-sh -c -d". For these automake
 # versions, $(mkinstalldirs) and $(install_sh) are unused.
-mkinstalldirs = $(SHELL) ${SHELL} /usr/home/tbrown/git/tdu/build-aux/install-sh -d
-install_sh = $(SHELL) ${SHELL} /usr/home/tbrown/git/tdu/build-aux/install-sh
+mkinstalldirs = $(SHELL) ${SHELL} /home/tbrown/git/tdu/build-aux/install-sh -d
+install_sh = $(SHELL) ${SHELL} /home/tbrown/git/tdu/build-aux/install-sh
 MKDIR_P = ../build-aux/install-sh -c -d
 mkdir_p = $(MKDIR_P)
 
@@ -195,7 +195,7 @@ $(DOMAIN).pot-update: $(POTFILES) $(srcdir)/POTFILES.in remove-potcdate.sed
 	      --files-from=$(srcdir)/POTFILES.in \
 	      --copyright-holder='$(COPYRIGHT_HOLDER)' \
 	      --package-name="$${package_prefix}tdu" \
-	      --package-version='0.1' \
+	      --package-version='0.2' \
 	      --msgid-bugs-address="$$msgid_bugs_address" \
 	    ;; \
 	esac
