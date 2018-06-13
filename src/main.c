@@ -35,14 +35,6 @@
  * Main entry point and generic functions for program.
  **/
 
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 700
-#endif
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -54,6 +46,10 @@
 #include <assert.h>
 #include <time.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "gettext.h"
 #include "defs.h"
 #include "extern.h"
@@ -63,10 +59,11 @@
 #define SECONDS_IN_DAY   60 * 60 * 24
 
 /* Internal functions */
-static void print_usage(void);
-static void print_version(void);
-static const char * program_name(void);
-static int32_t parse_argv(int32_t , char **);
+static void              print_usage(void);
+static void              print_version(void);
+static const char       *program_name(void);
+static int32_t           parse_argv(int32_t , char **);
+static int32_t           set_defaults();
 
 struct opts options = {0}; /**< Program options */
 
@@ -95,13 +92,7 @@ main(int32_t argc, char **argv)
 #endif
 
 	/* set defaults */
-	options.maxdepth = 2;
-	if ((options.atime = time(NULL)) == (time_t)-1) {
-		errx(EX_SOFTWARE, "unable to obtain the current time");
-	}
-	options.atime -= DEFAULT_ATIME * SECONDS_IN_DAY;
-	options.atime_days = DEFAULT_ATIME;
-	strcpy(options.units, "GB");
+	set_defaults();
 
 	/* parse command line arguments */
 	if (parse_argv(argc, argv)) {
@@ -112,6 +103,27 @@ main(int32_t argc, char **argv)
 	if (walk()) {
 		return(EXIT_FAILURE);
 	}
+
+	return(EXIT_SUCCESS);
+}
+
+/**
+ * Set the default options.
+ *
+ * \retval 0  If there were no errors.
+ **/
+static int32_t
+set_defaults()
+{
+
+	options.maxdepth = 2;
+	strcpy(options.units, "GB");
+	options.cost = 0.0;
+	if ((options.atime = time(NULL)) == (time_t)-1) {
+		errx(EX_SOFTWARE, "unable to obtain the current time");
+	}
+	options.atime -= DEFAULT_ATIME * SECONDS_IN_DAY;
+	options.atime_days = DEFAULT_ATIME;
 
 	return(EXIT_SUCCESS);
 }
@@ -131,12 +143,13 @@ parse_argv(int32_t argc, char **argv)
 	int32_t opt = 0;
 	int32_t opt_index = 0;
 	uint32_t atime = 0;
-	char *soptions = "hVva:m:u:";		/* short options structure */
+	char *soptions = "hVva:c:m:u:";		/* short options structure */
 	static struct option loptions[] = {	/* long options structure */
 		{"help",     no_argument,       NULL, 'h'},
 		{"version",  no_argument,       NULL, 'V'},
 		{"verbose",  no_argument,       NULL, 'v'},
 		{"atime",    required_argument, NULL, 'a'},
+		{"cost",     required_argument, NULL, 'c'},
 		{"maxdepth", required_argument, NULL, 'm'},
 		{"units",    required_argument, NULL, 'u'},
 		{NULL,       0,                 NULL,  0}
@@ -157,6 +170,9 @@ parse_argv(int32_t argc, char **argv)
 				break;
 			case 'a':
 				atime = (uint32_t)strtoul(optarg, NULL, 10);
+				break;
+			case 'c':
+				options.cost = strtof(optarg, NULL);
 				break;
 			case 'm':
 				options.maxdepth = (uint32_t)strtoul(optarg, NULL, 10);
@@ -218,7 +234,6 @@ parse_argv(int32_t argc, char **argv)
 		assert(options.atime > 0);
 	}
 
-
 	return(EXIT_SUCCESS);
 }
 
@@ -236,6 +251,7 @@ print_usage(void)
   -V, --version    display version information and exit.\n\
   -v, --verbose    verbose mode.\n\
   -a, --atime      last access time in days.\n\
+  -c, --cost       the cost to store 1 unit of data for 1 day.\n\
   -m, --maxdepth   maximum depth to report on.\n\
   -u, --units      the units to report in.\n\
   directory        the directory to report on.\n\
@@ -262,12 +278,12 @@ static const char *
 program_name(void)
 {
 #if HAVE_GETPROGNAME
-	return getprogname();
+	return(getprogname());
 #else
 #if HAVE_PROGRAM_INVOCATION_SHORT_NAME
-	return program_invocation_short_name;
+	return(program_invocation_short_name);
 #else
-	return "unknown";
+	return("unknown");
 #endif /* HAVE_PROGRAM_INVOCATION_SHORT_NAME */
 #endif /* HAVE_GETPROGNAME */
 }

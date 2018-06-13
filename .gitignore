@@ -1,0 +1,23 @@
+# Files to ignore.
+
+# All object files
+*.o
+
+# Configuration files
+config.log
+config.status
+
+# Executables
+src/tdu
+
+# Generated files
+Makefile
+Makefile.in
+VERSION
+aclocal.m4
+autom4te.cache/
+configure
+src/.deps/
+src/config.h
+src/config.h.in
+src/stamp-h1

@@ -40,6 +40,7 @@
 .Nm
 .Op Fl V
 .Op Fl a Ar n
+.Op Fl c Ar n
 .Op Fl h
 .Op Fl m Ar n
 .Op Fl u Ar units
@@ -59,6 +60,10 @@ The file last access time in days, to consider as old unused files.
 The default is
 .Ar 45
 days ago.
+.It Fl c Ar n
+The cost associated per unit of disk usage per day.
+The default is $
+.Ar 0.00 .
 .It Fl h
 Display a short help message and exit.
 .It Fl m Ar n
@@ -106,6 +111,30 @@ directory creating a tree like display
 of the disk usage at a maximum depth of 2 directories. It also
 will like the percentage of disk usage that have not been accessed
 in at least 45 days.
+.Pp
+While the command:
+.Bd -ragged -offset XXXX
+.Nm
+-c 1.14 -u TB ~
+.Ed
+.Pp
+Would walk your home directory creating a tree like display
+of the disk usage at a maximum depth of 2 directories. It also
+will like the percentage of disk usage that have not been accessed
+in at least 45 days and the cost associated with that unaccessed
+storage. The cost is calculated as a combination of the
+.Ar a ,
+.Ar c
+and
+.Ar u
+options.
+In the sense that it costs 
+.Ar 1.14
+dollars per day per
+.Ar TB .
+multiplied by the access time window (a default of
+.Ar 45
+days).
 .\" .Sh DIAGNOSTICS
 .\" For sections 1, 4, 6, 7, 8, and 9 printf/stderr messages only.
 .\" .Sh ERRORS
