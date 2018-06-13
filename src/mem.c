@@ -38,15 +38,16 @@
  * \{
  **/
 
-#define _XOPEN_SOURCE 700
-
-#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <err.h>
 #include <sysexits.h>
 #include <string.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "gettext.h"
 #include "defs.h"

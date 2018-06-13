@@ -3,7 +3,7 @@
 #
 
 AC_PREREQ(2.61)
-AC_INIT([tdu], 0.3, tbrown@freeshell.org)
+AC_INIT([tdu], 0.4, tbrown@freeshell.org)
 AC_CONFIG_AUX_DIR([build-aux])
 
 # Create the VERSION file, which contains the package version from
@@ -38,6 +38,7 @@ AC_CHECK_HEADERS([assert.h err.h ftw.h getopt.h libgen.h limits.h \
                   locale.h poll.h search.h stdint.h stdio.h       \
                   stdlib.h string.h sys/resource.h sys/time.h     \
                   sys/types.h sysexits.h time.h unistd.h])
+AC_CHECK_FUNCS([memset getprogname program_invocation_short_name twalk])
 
 dnl override CFLAGS selection when debugging
 AC_ARG_ENABLE([debug],

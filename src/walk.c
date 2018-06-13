@@ -35,14 +35,6 @@
  * Routines to walk a file system.
  **/
 
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 700
-#endif
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -60,6 +52,10 @@
 #include <libgen.h>
 #include <sysexits.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "gettext.h"
 #include "defs.h"
 #include "extern.h"
@@ -74,7 +70,6 @@ static int        dir_size(const char *, const struct stat *, int, struct FTW *)
 static uint64_t   max_openfds(void);
 static char      *pabs(const char *);
 static char      *pname(const char *, int);
-static int        dir_size(const char *, const struct stat *, int, struct FTW *);
 static char      *ppath(const char *, uint32_t);
 static int        summary(void);
 static char      *tformat(uint64_t);
@@ -318,10 +313,17 @@ summary(void)
 	struct pinfo *cur = NULL;
 	struct pinfo **ptr = NULL;
 
-	printf(ngettext("Size [%s]      >%d day[%%]     Directory\n",
-			"Size [%s]      >%d days[%%]    Directory\n",
-			options.atime_days),
-	       options.units, options.atime_days);
+	if (options.cost > 0.0) {
+		printf(ngettext("Cost [$]       >%d day[%%]     Directory\n",
+				"Cost [$]       >%d days[%%]    Directory\n",
+				options.atime_days),
+		       options.atime_days);
+	} else {
+		printf(ngettext("Size [%s]      >%d day[%%]     Directory\n",
+				"Size [%s]      >%d days[%%]    Directory\n",
+				options.atime_days),
+		       options.units, options.atime_days);
+	}
 
 	cur = xmalloc(sizeof(struct pinfo));
 	cur->path = options.path;
@@ -381,6 +383,10 @@ action(const void *node, VISIT v, int level)
 	if (v == postorder || v == leaf) {
 
 		size = (float)n->greater / (float)scale;
+		/* Cost overrides size */
+		if (options.cost > 0.0) {
+			size *=  options.cost * options.atime_days;
+		}
 		percentage = (float)(n->greater / (float)n->total) * 100.0;
 		path = ppath(n->path, n->level);
 
