@@ -35,6 +35,10 @@
  * Routines to walk a file system.
  **/
 
+#ifdef __linux__
+#define _GNU_SOURCE
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>

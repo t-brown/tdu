@@ -35,12 +35,17 @@
  * Main entry point and generic functions for program.
  **/
 
+#ifdef __linux__
+#define _GNU_SOURCE
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
 #include <getopt.h>
 #include <locale.h>
+#include <errno.h>
 #include <err.h>
 #include <sysexits.h>
 #include <assert.h>
