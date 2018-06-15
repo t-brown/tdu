@@ -147,7 +147,7 @@ parse_argv(int32_t argc, char **argv)
 	int32_t i = 0;
 	int32_t opt = 0;
 	int32_t opt_index = 0;
-	uint32_t atime = 0;
+	uint32_t atime = UINT32_MAX;
 	char *soptions = "hVva:c:m:u:";		/* short options structure */
 	static struct option loptions[] = {	/* long options structure */
 		{"help",     no_argument,       NULL, 'h'},
@@ -229,7 +229,7 @@ parse_argv(int32_t argc, char **argv)
 		options.path[i-1] = '\0';
 	}
 
-	if (atime != 0) {
+	if (atime != UINT32_MAX) {
 		/* Convert a number of days ago into a time_t */
 		if ((now = time(NULL)) == (time_t)-1) {
 			errx(EX_SOFTWARE, "unable to obtain the current time");
